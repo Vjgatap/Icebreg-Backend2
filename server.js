@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const adminRoutes = require('./routes/admin');
 
 // Import routes
 
@@ -13,7 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
+app.use('/api/admin', adminRoutes);
 app.use('/api/auth', require('./routes/auth'));
 // Database connection
 const db = require('./config/db');
