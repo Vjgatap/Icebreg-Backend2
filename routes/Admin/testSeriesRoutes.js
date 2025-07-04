@@ -1,15 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const Test = require("../models/Test");
+const Test = require("../../models/Admin/TestSeries");
 
-// Uncomment this code when you want to upload image using cloudinary
-// const multer = require("multer");
-// const { CloudinaryStorage } = require("multer-storage-cloudinary");
-// const cloudinary = require("../utils/cloudinary");
-
-
-// @route   POST /api/tests
-// @desc    Create a new test (without questions)
+// POST /api/tests - Create a new test
 router.post("/", async (req, res) => {
   try {
     const {
@@ -20,7 +13,10 @@ router.post("/", async (req, res) => {
       createdDate,
       passingMarks,
       totalMarks,
-      description
+      description,
+      url,
+      categoryId,
+      examId
     } = req.body;
 
     const newTest = new Test({
@@ -31,7 +27,10 @@ router.post("/", async (req, res) => {
       createdDate,
       passingMarks,
       totalMarks,
-      description
+      description,
+      url,
+      categoryId,
+      examId
     });
 
     const savedTest = await newTest.save();
@@ -41,39 +40,40 @@ router.post("/", async (req, res) => {
   }
 });
 
-// @route   GET /api/tests
-// @desc    Get all tests
+// GET /api/tests - Get all tests
 router.get("/", async (req, res) => {
   try {
-    const tests = await Test.find().select("-questions"); // Exclude questions if you just want test metadata
+    const tests = await Test.find()
+      .select("-questions")
+      .populate("categoryId", "name")
+      .populate("examId", "name");
     res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// @route   POST /api/tests/:testId/questions
-// @desc    Add a question to an existing test
+// POST /api/tests/:testId/questions - Add a question to an existing test
 router.post("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
-    const { question, correctAnswer, options, marks } = req.body;
+    const { question, correctAnswer, options, marks, imageUrl } = req.body;
 
     const test = await Test.findById(testId);
     if (!test) return res.status(404).json({ error: "Test not found" });
 
-    test.questions.push({ question, correctAnswer, options, marks });
-    await test.save();
+    test.questions.push({ question, correctAnswer, options, marks, imageUrl });
+    test.totalMarks += marks;
+    test.numberOfQuestions = test.questions.length;
 
+    await test.save();
     res.status(200).json(test);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-
-// @route   GET /api/tests/:testId/questions
-// @desc    Get all questions from a specific test
+// GET /api/tests/:testId/questions - Get all questions from a specific test
 router.get("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
@@ -87,8 +87,7 @@ router.get("/:testId/questions", async (req, res) => {
   }
 });
 
-// @route   GET /api/tests/:testId/questions/:questionId
-// @desc    Get a specific question from a test by question ID
+// GET /api/tests/:testId/questions/:questionId - Get a specific question
 router.get("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -105,7 +104,7 @@ router.get("/:testId/questions/:questionId", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:id - Update a test by MongoDB _id
+// PUT /api/tests/:id - Update a test
 router.put("/:id", async (req, res) => {
   try {
     const updatedTest = await Test.findByIdAndUpdate(
@@ -124,7 +123,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:id - Delete a test by MongoDB _id
+// DELETE /api/tests/:id - Delete a test
 router.delete("/:id", async (req, res) => {
   try {
     const deletedTest = await Test.findByIdAndDelete(req.params.id);
@@ -139,7 +138,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:testId/questions/:questionId
+// PUT /api/tests/:testId/questions/:questionId - Update a specific question
 router.put("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -153,16 +152,18 @@ router.put("/:testId/questions/:questionId", async (req, res) => {
 
     // Update question fields
     question.set(updateData);
-    await test.save();
 
+    // Recalculate totalMarks
+    test.totalMarks = test.questions.reduce((sum, q) => sum + q.marks, 0);
+
+    await test.save();
     res.json({ message: "Question updated successfully", question });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-
-// DELETE /api/tests/:testId/questions/:questionId
+// DELETE /api/tests/:testId/questions/:questionId - Delete a specific question
 router.delete("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -170,51 +171,20 @@ router.delete("/:testId/questions/:questionId", async (req, res) => {
     const test = await Test.findById(testId);
     if (!test) return res.status(404).json({ message: "Test not found" });
 
-    const questionIndex = test.questions.findIndex(q => q._id.toString() === questionId);
-    if (questionIndex === -1) {
-      return res.status(404).json({ message: "Question not found" });
-    }
+    const question = test.questions.id(questionId);
+    if (!question) return res.status(404).json({ message: "Question not found" });
 
-    // Remove the question from the array
-    test.questions.splice(questionIndex, 1);
+    const removedMarks = question.marks;
+    question.remove();
 
-    // Optional: update test.totalMarks and numberOfQuestions here
+    test.totalMarks -= removedMarks;
+    test.numberOfQuestions = test.questions.length;
 
     await test.save();
-
     res.json({ message: "Question deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-
-// This code for test papar upload using cloudinary
-// Setup multer with Cloudinary storage
-// const storage = new CloudinaryStorage({
-//   cloudinary: cloudinary,
-//   params: {
-//     folder: "test_question_images",
-//     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-//     transformation: [{ width: 800, crop: "limit" }]
-//   },
-// });
-
-// const upload = multer({ storage });
-
-// // ✅ POST /api/upload/image
-// // Uploads image and returns its Cloudinary URL
-// router.post("/image", upload.single("file"), (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-//     res.status(200).json({
-//       message: "Image uploaded successfully",
-//       imageUrl: req.file.path, // Cloudinary secure_url
-//       public_id: req.file.filename
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 module.exports = router;

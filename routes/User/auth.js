@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const User = require('../models/User');
+const User = require('../../models/User/User');
 
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 const CLERK_API_URL = process.env.CLERK_API_URL;
