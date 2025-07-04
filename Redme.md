@@ -71,12 +71,11 @@ Create a `.env` file in the root directory:
 ### 🛠️ Required `.env` Fields:
 
 ```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/your-db-name
-
-CLERK_SECRET_KEY=sk_test_your_clerk_secret
+MONGODB_URI=mongodb+srv://DBUser:user@userbackend.adtohfy.mongodb.net/?retryWrites=true&w=majority&appName=userBackend
+# MONGODB_URI=mongodb://localhost:27017/iceBreg
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_c3VidGxlLXRpZ2VyLTE5LmNsZXJrLmFjY291bnRzLmRldiQ
+CLERK_SECRET_KEY=sk_test_eM4bAVm3qWBJTc6nLeRfkLMSBnfpLMBX6g02yEjY5V
 CLERK_API_URL=https://api.clerk.dev/v1
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
 JWT_SECRET=your_jwt_secret_key
 ```
 

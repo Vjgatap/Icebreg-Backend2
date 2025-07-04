@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const adminRoutes = require('./routes/admin');
+const testRoutes = require('./routes/testRoutes');
 
 // Import routes
 
@@ -16,6 +17,8 @@ app.use(express.json());
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', require('./routes/auth'));
+
+app.use("/api/tests", testRoutes);
 // Database connection
 const db = require('./config/db');
 db.connect();
