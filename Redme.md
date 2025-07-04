@@ -77,6 +77,7 @@ MONGODB_URI=mongodb://localhost:27017/your-db-name
 CLERK_SECRET_KEY=sk_test_your_clerk_secret
 CLERK_API_URL=https://api.clerk.dev/v1
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+JWT_SECRET=your_jwt_secret_key
 ```
 
 > Replace all values with your actual **MongoDB URI** and **Clerk credentials**.
