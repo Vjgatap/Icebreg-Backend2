@@ -114,18 +114,16 @@ router.get("/:userId/results", async (req, res) => {
 });
 
 
-// GET result for a specific testSeriesId for a user
 router.get("/:userId/result/:testSeriesId", async (req, res) => {
   try {
     const { userId, testSeriesId } = req.params;
 
     const user = await User.findById(userId);
-
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Find the exam result for the specific testSeriesId
+    // Find the exam result
     const result = user.examinations.find(
       (exam) => exam.testSeriesId === testSeriesId
     );
@@ -134,20 +132,33 @@ router.get("/:userId/result/:testSeriesId", async (req, res) => {
       return res.status(404).json({ error: "Result not found for this test series" });
     }
 
+    // Fetch test info from Test model
+    const test = await Test.findById(testSeriesId);
+
+    if (!test) {
+      return res.status(404).json({ error: "Test series not found" });
+    }
+
+    const percentage = test.totalMarks
+      ? ((result.score / test.totalMarks) * 100).toFixed(2)
+      : null;
+
     return res.json({
       userId: user._id,
       name: user.name,
       email: user.email,
       testSeriesId: result.testSeriesId,
+      testSeriesName: test.name,
       score: result.score,
+      totalMarks: test.totalMarks,
       status: result.status,
+      percentage: percentage ? `${percentage}%` : "N/A",
+      attemptedAt: result.attemptedAt || "N/A",
     });
   } catch (err) {
     console.error("Error fetching result:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 module.exports = router;

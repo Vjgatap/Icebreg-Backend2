@@ -6,6 +6,10 @@ const ExamResultSchema = new mongoose.Schema({
   score: {
     type: Number,
   },
+  attemptedAt: {
+    type: Date,
+    default: Date.now,
+  },
    status: {
     type: String,
     enum: ['Passed', 'Failed', 'Pending'],
