@@ -2,11 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const user = require('./routes/User/auth');
+const auth = require('./routes/User/auth');
 const adminRoutes = require('./routes/Admin/admin');
 const categories = require('./routes/Admin/category');
 const exam = require('./routes/Admin/exam');
 const testRoutes = require('./routes/Admin/testSeriesRoutes');
+const user = require('./routes/Admin/user');
 
 // Import routes
 
@@ -18,12 +19,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/auth', user);
+app.use('/api/auth', auth);
 app.use('/api/admin', adminRoutes);
 
 app.use("/api/categories", categories);
 app.use("/api/exam", exam);
 app.use("/api/tests", testRoutes);
+app.use("/api/user", user);
 
 // Database connection
 const db = require('./config/db');

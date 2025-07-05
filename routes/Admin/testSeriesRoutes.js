@@ -6,8 +6,7 @@ const Test = require("../../models/Admin/TestSeries");
 router.post("/", async (req, res) => {
   try {
     const {
-      subject,
-      examName,
+      name,
       numberOfQuestions,
       duration,
       createdDate,
@@ -20,8 +19,7 @@ router.post("/", async (req, res) => {
     } = req.body;
 
     const newTest = new Test({
-      subject,
-      examName,
+      name,
       numberOfQuestions,
       duration,
       createdDate,

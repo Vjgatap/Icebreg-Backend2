@@ -60,48 +60,5 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET /api/students - Get all students
-router.get("/students", async (req, res) => {
-  try {
-    const students = await User.find(); // You can add filters if needed
-    res.json(students);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// PUT /api/users/:id - Update user by MongoDB _id
-router.put("/users/:id", async (req, res) => {
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json(updatedUser);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// DELETE /api/users/:id - Delete user by MongoDB _id
-router.delete("/users/:id", async (req, res) => {
-  try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
-
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.json({ message: "User deleted successfully", user: deletedUser });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
 
 module.exports = router;

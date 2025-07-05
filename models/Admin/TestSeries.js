@@ -5,12 +5,10 @@ const questionSchema = new mongoose.Schema({
   correctAnswer: { type: String, required: true },
   options: { type: [String], required: true },
   marks: { type: Number, required: true },
-  imageUrl: { type: String } // optional: if image is uploaded via Cloudinary
 });
 
 const testSchema = new mongoose.Schema({
-  subject: { type: String, required: true },
-  examName: { type: String, required: true },
+  name: { type: String, required: true },
   numberOfQuestions: { type: Number, required: true },
   duration: { type: Number, required: true }, // in minutes
   createdDate: { type: Date, default: Date.now },
