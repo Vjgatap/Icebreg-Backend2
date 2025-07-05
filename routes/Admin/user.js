@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const User = require('../../models/User/User');
+const Test = require('../../models/Admin/TestSeries');
 
 // GET /api/user/students - Get all students
 router.get("/students", async (req, res) => {
@@ -73,99 +74,80 @@ router.delete("/:id", async (req, res) => {
 
 
 // GET /api/user/:userId/exams - Get all exam results for a student
-router.get("/:userId/exams", async (req, res) => {
+router.get("/:userId/results", async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId); // Or use clerkId if needed
+    // Find the user
+    const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    // Format exam results with percentage and grade
-    const formattedExams = user.examinations.map((exam) => {
-      const percentage = ((exam.score / exam.totalMarks) * 100).toFixed(2);
+    const examResults = user.examinations;
 
-      let grade = "F";
-      if (percentage >= 90) grade = "A+";
-      else if (percentage >= 80) grade = "A";
-      else if (percentage >= 70) grade = "B+";
-      else if (percentage >= 60) grade = "B";
-      else if (percentage >= 50) grade = "C";
+    // Optional: Populate test info for each testSeriesId (join-like operation)
+    const populatedResults = await Promise.all(
+      examResults.map(async (result) => {
+        const test = await Test.findById(result.testSeriesId).select("name description totalMarks passingMarks");
+        return {
+          testSeriesId: result.testSeriesId,
+          score: result.score,
+          status: result.status,
+          testInfo: test || null,
+        };
+      })
+    );
 
-      return {
-        examName: exam.examName,
-        examDate: exam.examDate,
-        subject: exam.subject,
-        score: exam.score,
-        totalMarks: exam.totalMarks,
-        percentage: `${percentage}%`,
-        grade,
-        status: exam.status,
-      };
+    return res.json({
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      totalExams: examResults.length,
+      results: populatedResults,
     });
-
-    res.json({
-      studentName: user.name,
-      studentEmail: user.email,
-      studentId: user._id,
-      exams: formattedExams,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error("Error fetching exam results:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
-// GET /api/user/:userId/exams?examName=...&subject=...
-router.get("/:userId/exams", async (req, res) => {
+
+// GET result for a specific testSeriesId for a user
+router.get("/:userId/result/:testSeriesId", async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { examName, subject } = req.query;
+    const { userId, testSeriesId } = req.params;
 
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    // Search for exam matching both examName and subject
-    const exam = user.examinations.find(
-      (e) =>
-        e.examName.toLowerCase() === examName.toLowerCase() &&
-        e.subject.toLowerCase() === subject.toLowerCase()
+    // Find the exam result for the specific testSeriesId
+    const result = user.examinations.find(
+      (exam) => exam.testSeriesId === testSeriesId
     );
 
-    if (!exam) {
-      return res.status(404).json({ message: "Exam result not found for the given subject and exam name" });
+    if (!result) {
+      return res.status(404).json({ error: "Result not found for this test series" });
     }
 
-    // Calculate percentage and grade
-    const percentage = ((exam.score / exam.totalMarks) * 100).toFixed(2);
-    let grade = "F";
-    if (percentage >= 90) grade = "A+";
-    else if (percentage >= 80) grade = "A";
-    else if (percentage >= 70) grade = "B+";
-    else if (percentage >= 60) grade = "B";
-    else if (percentage >= 50) grade = "C";
-
-    res.json({
-      studentName: user.name,
-      studentEmail: user.email,
-      studentId: user._id,
-      course: subject,
-      examName: exam.examName,
-      examDate: exam.examDate,
-      score: exam.score,
-      totalMarks: exam.totalMarks,
-      percentage: `${percentage}%`,
-      grade,
-      status: exam.status,
+    return res.json({
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      testSeriesId: result.testSeriesId,
+      score: result.score,
+      status: result.status,
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error("Error fetching result:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 module.exports = router;
