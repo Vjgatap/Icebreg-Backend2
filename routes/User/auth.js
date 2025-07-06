@@ -128,9 +128,9 @@ router.post('/apply-exam', async (req, res) => {
     }
 
     tests.forEach(test => {
-      if (!user.examinations.some(exam => exam.examName === (test.name || 'Unknown Test'))) {
+      if (!user.examinations.some(exam => exam.examName === (test.name || test.examName || 'Unknown Test'))) {
         user.examinations.push({
-          examName: test.name || 'Unknown Test',
+          examName: test.name || test.examName || 'Unknown Test',
           examDate: new Date(),
           score: null,
           totalMarks: test.totalMarks || 0,
@@ -163,20 +163,20 @@ router.post('/apply-test', async (req, res) => {
     }
 
     const testQuery = testId ? { _id: testId } : { name: testName };
-    const test = await Test.findOne(testQuery).select('name subject totalMarks');
+    const test = await Test.findOne(testQuery).select('name examName subject totalMarks');
     console.log('Test found:', test); // Debug log
     if (!test) {
       return res.status(404).json({ error: 'Test not found' });
     }
 
-    const existingExam = user.examinations.find((exam) => exam.examName === (test.name || 'Unknown Test'));
+    const existingExam = user.examinations.find((exam) => exam.examName === (test.name || test.examName || 'Unknown Test'));
     if (existingExam) {
       existingExam.score = null;
       existingExam.status = 'Pending';
       existingExam.examDate = new Date();
     } else {
       user.examinations.push({
-        examName: test.name || 'Unknown Test',
+        examName: test.name || test.examName || 'Unknown Test',
         examDate: new Date(),
         score: null,
         totalMarks: test.totalMarks || 0,
@@ -207,14 +207,14 @@ router.post('/submit-test', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const test = await Test.findById(testId).select('questions totalMarks passingMarks name subject');
+    const test = await Test.findById(testId).select('questions totalMarks passingMarks name examName subject');
     console.log('Test for submission:', test); // Debug log
     if (!test) {
       return res.status(404).json({ error: 'Test not found' });
     }
 
     const examEntry = user.examinations.find(
-      (exam) => exam.examName === (test.name || 'Unknown Test') && exam.status === 'Pending'
+      (exam) => exam.examName === (test.name || test.examName || 'Unknown Test') && exam.status === 'Pending'
     );
     if (!examEntry) {
       return res.status(400).json({ error: 'User has not applied for this test or test is already submitted' });
@@ -268,7 +268,12 @@ router.get('/applied-tests-exams', async (req, res) => {
 
     const appliedDetails = [];
     for (const examEntry of user.examinations) {
-      const test = await Test.findOne({ name: examEntry.examName }).select('name examId');
+      const test = await Test.findOne({
+        $or: [
+          { name: examEntry.examName },
+          { examName: examEntry.examName }
+        ]
+      }).select('name examName examId');
       let examName = 'Not linked to an exam';
       if (test && test.examId) {
         const exam = await Exam.findById(test.examId).select('name');
@@ -276,7 +281,7 @@ router.get('/applied-tests-exams', async (req, res) => {
       }
 
       appliedDetails.push({
-        testName: examEntry.examName,
+        testName: test ? (test.name || test.examName || 'Unknown Test') : examEntry.examName,
         examName,
         subject: examEntry.subject || 'Default Subject',
         totalMarks: examEntry.totalMarks || 0,

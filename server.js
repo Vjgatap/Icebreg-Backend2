@@ -8,6 +8,7 @@ const categories = require('./routes/Admin/category');
 const exam = require('./routes/Admin/exam');
 const testRoutes = require('./routes/Admin/testSeriesRoutes');
 
+
 // Import routes
 
 
@@ -24,6 +25,7 @@ app.use('/api/admin', adminRoutes);
 app.use("/api/categories", categories);
 app.use("/api/exam", exam);
 app.use("/api/tests", testRoutes);
+
 
 // Database connection
 const db = require('./config/db');
