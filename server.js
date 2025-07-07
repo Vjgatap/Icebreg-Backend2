@@ -10,6 +10,7 @@ const exam = require('./routes/Admin/exam');
 const testRoutes = require('./routes/Admin/testSeriesRoutes');
 const user = require('./routes/Admin/user');
 const examResult = require('./routes/Admin/examResult');
+const questionpapers = require('./routes/Admin/questionPapers');
 
 
 // Import routes
@@ -30,6 +31,7 @@ app.use("/api/exams", exam);
 app.use("/api/test-series", testRoutes);
 app.use("/api/user", user);
 app.use("/api/examResult", examResult);
+app.use("/api/question-papers", questionpapers);
 
 
 // Database connection
