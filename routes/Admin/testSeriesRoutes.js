@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Test = require("../../models/Admin/TestSeries");
 
-// POST /api/tests - Create a new test
+// POST /api/test-series - Create a new test
 router.post("/", async (req, res) => {
   try {
     const {
@@ -38,7 +38,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /api/tests - Get all tests
+// GET /api/test-series - Get all tests
 router.get("/", async (req, res) => {
   try {
     const tests = await Test.find()
@@ -51,7 +51,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/tests/:testId/questions - Add a question to an existing test
+// POST /api/test-series/:testId/questions - Add a question to an existing test
 router.post("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
@@ -71,7 +71,7 @@ router.post("/:testId/questions", async (req, res) => {
   }
 });
 
-// GET /api/tests/:testId/questions - Get all questions from a specific test
+// GET /api/test-series/:testId/questions - Get all questions from a specific test
 router.get("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
@@ -85,7 +85,7 @@ router.get("/:testId/questions", async (req, res) => {
   }
 });
 
-// GET /api/tests/:testId/questions/:questionId - Get a specific question
+// GET /api/test-series/:testId/questions/:questionId - Get a specific question
 router.get("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -102,7 +102,7 @@ router.get("/:testId/questions/:questionId", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:id - Update a test
+// PUT /api/test-series/:id - Update a test
 router.put("/:id", async (req, res) => {
   try {
     const updatedTest = await Test.findByIdAndUpdate(
@@ -121,7 +121,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:id - Delete a test
+// DELETE /api/test-series/:id - Delete a test
 router.delete("/:id", async (req, res) => {
   try {
     const deletedTest = await Test.findByIdAndDelete(req.params.id);
@@ -136,7 +136,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:testId/questions/:questionId - Update a specific question
+// PUT /api/test-series/:testId/questions/:questionId - Update a specific question
 router.put("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -161,7 +161,7 @@ router.put("/:testId/questions/:questionId", async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:testId/questions/:questionId - Delete a specific question
+// DELETE /api/test-series/:testId/questions/:questionId - Delete a specific question
 router.delete("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
