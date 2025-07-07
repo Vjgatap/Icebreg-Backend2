@@ -2,31 +2,20 @@ const mongoose = require('mongoose');
 
 // Sub-schema for each exam result
 const ExamResultSchema = new mongoose.Schema({
-  examName: {
-    type: String,
-    required: true,
-  },
-  examDate: {
-    type: Date,
-    required: true,
-  },
+  testSeriesId:{type: String, required: true},
   score: {
     type: Number,
   },
-  totalMarks: {
-    type: Number,
-    required: true,
-  },
-  subject: {
-    type: String,
-    required: true,
+  attemptedAt: {
+    type: Date,
+    default: Date.now,
   },
    status: {
     type: String,
     enum: ['Passed', 'Failed', 'Pending'],
     default: 'Pending',
   },
-}, { _id: false });
+});
 
 const UserSchema = new mongoose.Schema({
   clerkId: {
