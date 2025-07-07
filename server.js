@@ -24,7 +24,7 @@ app.use('/api/auth', auth);
 app.use('/api/admin', adminRoutes);
 
 app.use("/api/categories", categories);
-app.use("/api/exam", exam);
+app.use("/api/exams", exam);
 app.use("/api/test-series", testRoutes);
 app.use("/api/user", user);
 app.use("/api/examResult", examResult);

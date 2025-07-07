@@ -38,13 +38,30 @@ router.post("/", async (req, res) => {
   }
 });
 
+// // GET /api/test-series - Get all tests
+// router.get("/", async (req, res) => {
+//   try {
+//     const tests = await Test.find()
+//       .select("-questions")
+//       .populate("categoryId", "name")
+//       .populate("examId", "name");
+//     res.status(200).json(tests);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 // GET /api/test-series - Get all tests
 router.get("/", async (req, res) => {
   try {
     const tests = await Test.find()
-      .select("-questions")
-      .populate("categoryId", "name")
-      .populate("examId", "name");
+      .select("-questions") // exclude questions field
+      .populate("categoryId", "name") // only fetch category name
+      .populate({
+        path: "examId",
+        model: "Exam", // model name should match your exam schema registration
+        select: "-__v"  // or select specific fields like 'name duration' if needed
+      });
+
     res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -169,20 +186,26 @@ router.delete("/:testId/questions/:questionId", async (req, res) => {
     const test = await Test.findById(testId);
     if (!test) return res.status(404).json({ message: "Test not found" });
 
+    // Find the question to get its marks
     const question = test.questions.id(questionId);
     if (!question) return res.status(404).json({ message: "Question not found" });
 
     const removedMarks = question.marks;
-    question.remove();
 
+    // Use pull() to remove the question by ID
+    test.questions.pull({ _id: questionId });
+
+    // Update total marks and question count
     test.totalMarks -= removedMarks;
     test.numberOfQuestions = test.questions.length;
 
     await test.save();
+
     res.json({ message: "Question deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 module.exports = router;
