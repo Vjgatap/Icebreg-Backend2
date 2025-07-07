@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Test = require("../../models/Admin/TestSeries");
 
-// POST /api/tests - Create a new test
+// POST /api/test-series - Create a new test
 router.post("/", async (req, res) => {
   try {
     const {
@@ -38,20 +38,37 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /api/tests - Get all tests
+// // GET /api/test-series - Get all tests
+// router.get("/", async (req, res) => {
+//   try {
+//     const tests = await Test.find()
+//       .select("-questions")
+//       .populate("categoryId", "name")
+//       .populate("examId", "name");
+//     res.status(200).json(tests);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+// GET /api/test-series - Get all tests
 router.get("/", async (req, res) => {
   try {
     const tests = await Test.find()
-      .select("-questions")
-      .populate("categoryId", "name")
-      .populate("examId", "name");
+      .select("-questions") // exclude questions field
+      .populate("categoryId", "name") // only fetch category name
+      .populate({
+        path: "examId",
+        model: "Exam", // model name should match your exam schema registration
+        select: "-__v"  // or select specific fields like 'name duration' if needed
+      });
+
     res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST /api/tests/:testId/questions - Add a question to an existing test
+// POST /api/test-series/:testId/questions - Add a question to an existing test
 router.post("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
@@ -71,7 +88,7 @@ router.post("/:testId/questions", async (req, res) => {
   }
 });
 
-// GET /api/tests/:testId/questions - Get all questions from a specific test
+// GET /api/test-series/:testId/questions - Get all questions from a specific test
 router.get("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
@@ -85,7 +102,7 @@ router.get("/:testId/questions", async (req, res) => {
   }
 });
 
-// GET /api/tests/:testId/questions/:questionId - Get a specific question
+// GET /api/test-series/:testId/questions/:questionId - Get a specific question
 router.get("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -102,7 +119,7 @@ router.get("/:testId/questions/:questionId", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:id - Update a test
+// PUT /api/test-series/:id - Update a test
 router.put("/:id", async (req, res) => {
   try {
     const updatedTest = await Test.findByIdAndUpdate(
@@ -121,7 +138,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:id - Delete a test
+// DELETE /api/test-series/:id - Delete a test
 router.delete("/:id", async (req, res) => {
   try {
     const deletedTest = await Test.findByIdAndDelete(req.params.id);
@@ -136,7 +153,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// PUT /api/tests/:testId/questions/:questionId - Update a specific question
+// PUT /api/test-series/:testId/questions/:questionId - Update a specific question
 router.put("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -161,7 +178,7 @@ router.put("/:testId/questions/:questionId", async (req, res) => {
   }
 });
 
-// DELETE /api/tests/:testId/questions/:questionId - Delete a specific question
+// DELETE /api/test-series/:testId/questions/:questionId - Delete a specific question
 router.delete("/:testId/questions/:questionId", async (req, res) => {
   try {
     const { testId, questionId } = req.params;
@@ -169,20 +186,26 @@ router.delete("/:testId/questions/:questionId", async (req, res) => {
     const test = await Test.findById(testId);
     if (!test) return res.status(404).json({ message: "Test not found" });
 
+    // Find the question to get its marks
     const question = test.questions.id(questionId);
     if (!question) return res.status(404).json({ message: "Question not found" });
 
     const removedMarks = question.marks;
-    question.remove();
 
+    // Use pull() to remove the question by ID
+    test.questions.pull({ _id: questionId });
+
+    // Update total marks and question count
     test.totalMarks -= removedMarks;
     test.numberOfQuestions = test.questions.length;
 
     await test.save();
+
     res.json({ message: "Question deleted successfully" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 module.exports = router;
