@@ -1,16 +1,11 @@
 const mongoose = require("mongoose");
 
 const ExamResultSchema = new mongoose.Schema({
-//   examDate: {
-//     type: Date,
-//     required: true,
-//   },
   testSeriesId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Test",
-  required: true
-},
-
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Test",
+    required: true
+  },
   score: {
     type: Number,
   },
@@ -18,21 +13,24 @@ const ExamResultSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-//   subject: {
-//     type: String,
-//     required: true,
-//   },
   status: {
     type: String,
-    enum: ['Passed', 'Failed', 'Pending'],
+    enum: ['Passed', 'Failed', 'Pending', 'Submitted'], // Added 'Submitted' to support answer paper submission
     default: 'Pending',
+  },
+  examDate: {
+    type: Date,
+    // Uncommented to support userExam.js logic
+  },
+  answerPaperUrl: {
+    type: String, // Added to store the Supabase URL of the answer paper PDF
   },
 }, { _id: false });
 
 const UserExamSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId, // or mongoose.Schema.Types.ObjectId if you want to reference a User model
-    ref:'User',
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
     index: true
   },
