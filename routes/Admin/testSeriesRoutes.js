@@ -68,7 +68,24 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/test-series/:testId/questions - Add a question to an existing test
+// GET /api/test-series/:testId - Get a specific test by ID
+router.get("/:testId", async (req, res) => {
+  try {
+    const { testId } = req.params;
+
+    const test = await Test.findById(testId)
+      // .populate("categoryId", "name")
+      // .populate("examId", "name");
+
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    res.status(200).json(test);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});// POST /api/test-series/:testId/questions - Add a question to an existing test
 router.post("/:testId/questions", async (req, res) => {
   try {
     const { testId } = req.params;
