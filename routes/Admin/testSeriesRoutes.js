@@ -118,6 +118,27 @@ router.get("/:testId/questions", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// GET /api/test-series/:testId/pdf-url - Get PDF URL of a test
+router.get("/:testId/pdf-url", async (req, res) => {
+  try {
+    const { testId } = req.params;
+
+    const test = await Test.findById(testId).select("url name");
+    if (!test) {
+      return res.status(404).json({ message: "Test not found" });
+    }
+
+    if (!test.url) {
+      return res.status(404).json({ message: `PDF URL not available for test "${test.name}"` });
+    }
+
+    res.status(200).json({ pdfUrl: test.url });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 
 // GET /api/test-series/:testId/questions/:questionId - Get a specific question
 router.get("/:testId/questions/:questionId", async (req, res) => {
