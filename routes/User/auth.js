@@ -298,3 +298,37 @@ router.get('/applied-tests-exams', async (req, res) => {
 });
 
 module.exports = router;
+
+
+// POST /api/auth/sync-user
+router.post('/sync-user', async (req, res) => {
+  const { clerkId, email, name, profileImage } = req.body;
+
+  if (!clerkId || !email) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    let user = await User.findOne({ clerkId });
+
+    if (!user) {
+      user = new User({
+        clerkId,
+        email,
+        name,
+        profileImage,
+      });
+      await user.save();
+      return res.status(201).json({ message: 'User created', user });
+    } else {
+      // Optional: update profile if name or image changes
+      user.name = name || user.name;
+      user.profileImage = profileImage || user.profileImage;
+      await user.save();
+      return res.status(200).json({ message: 'User already exists, updated profile', user });
+    }
+  } catch (error) {
+    console.error('Sync user error:', error.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
