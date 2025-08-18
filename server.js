@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ["https://iceberg2-six.vercel.app", "http://localhost:3000"],
+  origin: ["https://iceberg21.vercel.app/", "http://localhost:3000"],
   credentials: true
 }));
 
