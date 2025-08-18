@@ -5,6 +5,7 @@ const User = require('../../models/User/User');
 const Test = require('../../models/Admin/TestSeries');
 const Exam = require('../../models/Admin/Exam');
 
+const  users = require("@clerk/backend");
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 const CLERK_API_URL = process.env.CLERK_API_URL;
 
@@ -58,6 +59,24 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
+
+router.get("/get-email/:clerkId", async (req, res) => {
+  try {
+    const { clerkId } = req.params;
+
+    const user = await User.findOne({ clerkId });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ email: user.email });
+  } catch (error) {
+    console.error("Error fetching email:", error);
+    res.status(500).json({ error: "Failed to fetch email" });
+  }
+});
 // GET /api/students - Get all students
 router.get("/students", async (req, res) => {
   try {
