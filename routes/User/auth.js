@@ -6,6 +6,7 @@ const Test = require('../../models/Admin/TestSeries');
 const Exam = require('../../models/Admin/Exam');
 
 const  users = require("@clerk/backend");
+const { UserProfile } = require('@clerk/nextjs');
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 const CLERK_API_URL = process.env.CLERK_API_URL;
 
@@ -71,7 +72,7 @@ router.get("/get-email/:clerkId", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json({ email: user.email });
+    res.json({ email: user.email, userId: user._id });
   } catch (error) {
     console.error("Error fetching email:", error);
     res.status(500).json({ error: "Failed to fetch email" });
