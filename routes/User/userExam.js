@@ -249,6 +249,65 @@ router.post('/apply-test', async (req, res) => {
 //     res.status(500).json({ error: error.message });
 //   }
 // });
+// router.post('/submit-test', async (req, res) => {
+//   try {
+//     let { userId, testId, answers } = req.body || {};
+//     console.log('Submit test request body:', { userId, testId, answers });
+
+//     if (!userId || !testId || !answers) {
+//       return res.status(400).json({ error: 'userId, testId, and answers are required' });
+//     }
+
+//     // ✅ Convert answers object → array if needed
+//     if (!Array.isArray(answers) && typeof answers === "object") {
+//       answers = Object.values(answers);
+//     }
+
+//     if (!Array.isArray(answers)) {
+//       return res.status(400).json({ error: 'answers must be an array or object' });
+//     }
+
+//     if (!UserExam) throw new Error('UserExam model is undefined');
+
+//     const userExam = await UserExam.findOne({ userId });
+//     console.log('UserExam found:', userExam ? userExam._id : 'None');
+//     if (!userExam) return res.status(404).json({ error: 'User exam record not found' });
+
+//     if (!Test) throw new Error('Test model is undefined');
+
+//     const test = await Test.findById(testId).select('questions totalMarks passingMarks name');
+//     console.log('Test found:', test ? test._id : 'None');
+//     if (!test) return res.status(404).json({ error: 'Test not found' });
+
+//     const examEntry = userExam.examinations.find(
+//       (exam) => exam.testSeriesId.toString() === testId && exam.status === 'Pending'
+//     );
+//     if (!examEntry) {
+//       return res.status(400).json({ error: 'No pending test found for this user' });
+//     }
+
+//     let score = 0;
+//     test.questions.forEach((question, index) => {
+//       if (index < answers.length && answers[index] === question.correctAnswer) {
+//         score += question.marks;
+//       }
+//     });
+
+//     examEntry.score = score;
+//     examEntry.status = score >= test.passingMarks ? 'Passed' : 'Failed';
+//     examEntry.examDate = new Date();
+//     await userExam.save();
+
+//     res.status(200).json({
+//       message: 'Test submitted successfully',
+//       score,
+//       status: examEntry.status,
+//     });
+//   } catch (error) {
+//     console.error('Submit test error:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 router.post('/submit-test', async (req, res) => {
   try {
     let { userId, testId, answers } = req.body || {};
@@ -286,25 +345,139 @@ router.post('/submit-test', async (req, res) => {
       return res.status(400).json({ error: 'No pending test found for this user' });
     }
 
+    // ✅ Store answers with questionId reference
     let score = 0;
+    examEntry.answers = []; // reset if already exists
     test.questions.forEach((question, index) => {
-      if (index < answers.length && answers[index] === question.correctAnswer) {
-        score += question.marks;
+      const userAnswer = answers[index]; // assuming same order
+      if (userAnswer) {
+        examEntry.answers.push({
+          questionId: question._id,
+          answer: userAnswer
+        });
+
+        // ✅ Scoring
+        if (userAnswer === question.correctAnswer) {
+          score += question.marks;
+        }
       }
     });
 
     examEntry.score = score;
     examEntry.status = score >= test.passingMarks ? 'Passed' : 'Failed';
     examEntry.examDate = new Date();
+
     await userExam.save();
 
     res.status(200).json({
       message: 'Test submitted successfully',
       score,
       status: examEntry.status,
+      answers: examEntry.answers
     });
   } catch (error) {
     console.error('Submit test error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ PUT: Add/Update examination for a user
+router.put("/examinations", async (req, res) => {
+  try {
+    const { userId, testSeriesId, totalMarks } = req.body;
+
+    if (!userId || !testSeriesId || !totalMarks) {
+      return res.status(400).json({ error: "userId, testSeriesId, and totalMarks are required" });
+    }
+
+    // ✅ Check if user exam record exists
+    let userExam = await UserExam.findOne({ userId });
+
+    if (!userExam) {
+      // If no record exists → create new one with first exam
+      userExam = new UserExam({
+        userId,
+        examinations: [
+          {
+            testSeriesId,
+            totalMarks,
+            status: "Pending",
+          },
+        ],
+      });
+    } else {
+      // ✅ Check if exam already exists in examinations
+      const examExists = userExam.examinations.find(
+        (exam) => exam.testSeriesId.toString() === testSeriesId
+      );
+
+      if (examExists) {
+        // If exam already exists → just update marks/status if needed
+        examExists.totalMarks = totalMarks;
+        examExists.status = "Pending"; // reset status if you want
+        examExists.score = 0;
+        examExists.answers = [];
+        examExists.examDate = null;
+      } else {
+        // If not exists → push new exam entry
+        userExam.examinations.push({
+          testSeriesId,
+          totalMarks,
+          status: "Pending",
+        });
+      }
+    }
+
+    await userExam.save();
+
+    res.status(200).json({
+      message: "Examination updated successfully",
+      userExam,
+    });
+  } catch (error) {
+    console.error("Update examination error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET: All user exams with populated test + questions
+router.get("/examinations", async (req, res) => {
+  try {
+    const userExams = await UserExam.find()
+      .populate({
+        path: "examinations.testSeriesId",
+        model: "Test",
+        select: "name questions totalMarks passingMarks duration description", 
+      })
+      .populate("userId", "name email"); // optional: get user details
+
+    res.status(200).json(userExams);
+  } catch (error) {
+    console.error("Fetch all exams error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET: Exams for a single user
+router.get("/examinations/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const userExam = await UserExam.findOne({ userId })
+      .populate({
+        path: "examinations.testSeriesId",
+        model: "Test",
+        select: "name questions totalMarks passingMarks duration description",
+      })
+      .populate("userId", "name email");
+
+    if (!userExam) {
+      return res.status(404).json({ error: "No exam records found for this user" });
+    }
+
+    res.status(200).json(userExam);
+  } catch (error) {
+    console.error("Fetch user exams error:", error);
     res.status(500).json({ error: error.message });
   }
 });
