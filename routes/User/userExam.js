@@ -482,6 +482,177 @@ router.get("/examinations/:userId", async (req, res) => {
   }
 });
 
+// ✅ Get all user exams (user repeated for each exam they attempted)
+// GET: All exam attempts (user appears multiple times if multiple exams)
+router.get("/exam-attempts", async (req, res) => {
+  try {
+    const examAttempts = await UserExam.aggregate([
+      { $unwind: "$examinations" }, // flatten each exam
+      {
+        $lookup: {
+          from: "users", // collection name of User model
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $lookup: {
+          from: "tests", // collection name of Test model
+          localField: "examinations.testSeriesId",
+          foreignField: "_id",
+          as: "test",
+        },
+      },
+      { $unwind: "$test" },
+      {
+        $project: {
+          _id: 0,
+          userId: "$user._id",
+          userName: "$user.name",
+          userEmail: "$user.email",
+          testId: "$test._id",
+          testName: "$test.name",
+          score: "$examinations.score",
+          totalMarks: "$examinations.totalMarks",
+          status: "$examinations.status",
+          examDate: "$examinations.examDate",
+          answers: "$examinations.answers",
+        },
+      },
+    ]);
+
+    res.status(200).json(examAttempts);
+  } catch (error) {
+    console.error("Fetch exam attempts error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ Update Descriptive Answers & Score
+router.put("/userexam/:userId/:examId/descriptive", async (req, res) => {
+  try {
+    const { userId, examId } = req.params;
+    const { descriptiveAttempted, descriptiveScore, descriptiveTotal, answers } = req.body;
+
+    const userExam = await UserExam.findOne({ userId });
+
+    if (!userExam) {
+      return res.status(404).json({ message: "User exam not found" });
+    }
+
+    const exam = userExam.examinations.find(exam => exam.testSeriesId.toString() === examId);
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    // Update descriptive fields
+    exam.descriptiveTotal = descriptiveTotal ?? exam.descriptiveTotal;
+    exam.descriptiveAttempted = descriptiveAttempted ?? exam.descriptiveAttempted;
+    exam.descriptiveScore = descriptiveScore ?? exam.descriptiveScore;
+    exam.descriptiveNotAttempted = exam.descriptiveTotal - exam.descriptiveAttempted;
+
+    // Optionally update descriptive answers (with type = "Descriptive")
+    if (answers && Array.isArray(answers)) {
+      answers.forEach(ans => {
+        exam.answers.push({
+          questionId: ans.questionId,
+          type: "Descriptive",
+          answer: ans.answer,
+          score: ans.score || 0
+        });
+      });
+    }
+
+    await userExam.save();
+    res.json({ message: "Descriptive info updated successfully", exam });
+
+  } catch (error) {
+    console.error("Error updating descriptive exam:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+
+router.get("/student-result/:userId/:testSeriesId", async (req, res) => {
+  try {
+    const { userId, testSeriesId } = req.params;
+
+    // Fetch user exam with populated references
+    const userExam = await UserExam.findOne({ userId })
+      .populate("userId", "name email subject batch enrollmentDate avatar")
+      .populate("examinations.testSeriesId", "name totalMarks questions");
+
+    if (!userExam) {
+      return res.status(404).json({ message: "No exam data found for this student" });
+    }
+
+    // Find exam for the given testSeriesId
+    const exam = userExam.examinations.find(
+      (ex) => ex.testSeriesId._id.toString() === testSeriesId
+    );
+
+    if (!exam) {
+      return res.status(404).json({ message: "No exam result found for this testSeriesId" });
+    }
+
+    // ✅ MCQ summary
+    const totalMCQs = exam.answers.length;
+    const correct = exam.answers.filter(ans => {
+      const question = exam.testSeriesId.questions.id(ans.questionId);
+      return question && question.correctAnswer === ans.answer;
+    }).length;
+
+    const incorrect = totalMCQs - correct;
+    const accuracy = totalMCQs > 0 ? ((correct / totalMCQs) * 100).toFixed(2) : 0;
+
+    // ✅ Prepare Response
+    res.json({
+      studentInfo: {
+        id: userExam.userId._id,
+        name: userExam.userId.name,
+        email: userExam.userId.email,
+        subject: userExam.userId.subject || "N/A",
+        batch: userExam.userId.batch || "N/A",
+        enrollmentDate: userExam.userId.enrollmentDate,
+        avatar: userExam.userId.avatar || "/placeholder.svg"
+      },
+      testResult: {
+        testId: exam.testSeriesId._id,
+        testName: exam.testSeriesId.name,
+        totalMarks: exam.totalMarks,
+        score: exam.score,
+        status: exam.status,
+        examDate: exam.examDate,
+        mcqSummary: {
+          totalMCQs,
+          correct,
+          incorrect,
+          accuracy: `${accuracy}%`
+        },
+        descriptiveSummary: {
+          totalQuestions: exam.descriptiveTotal || 0,
+          attempted: exam.descriptiveAttempted || 0,
+          notAttempted: exam.descriptiveNotAttempted || 0,
+          descriptiveScore: exam.descriptiveScore || 0,
+          avgScore: exam.descriptiveTotal > 0 
+            ? `${(exam.descriptiveScore / exam.descriptiveTotal).toFixed(1)}/10`
+            : "0/10"
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error("Error fetching student test result:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+
+
+
 // GET /api/apply/applied-tests-exams - Get all applied tests and exams for a user
 router.get('/applied-tests-exams', async (req, res) => {
   try {
@@ -532,6 +703,7 @@ router.get('/applied-tests-exams', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // GET /api/apply/question-paper/:testId - Get question paper URL for a test
 router.get('/question-paper/:testId', async (req, res) => {
